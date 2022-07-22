@@ -1,0 +1,430 @@
+<div class="wrapped">
+  <div id="welcome">
+    Please select single Frame or an Instance to find all Instances used in your document.
+  </div>
+  <div id="loader" class="loader hide"></div>
+  <div id="errBox" class="hide"></div>
+  <div id="list"></div>
+  <div class="buttonBar">
+    <button id="create" class="primary">Find</button>
+    <select name="" id="where">
+      <option value="all">Entire Document</option>
+      <option value="page">Current Page</option>
+      <option value="frame">Selected Frame</option>
+    </select>
+    <button id="next" disabled>Next</button>
+    <button id="prev" disabled>Previous</button>
+  </div>
+
+</div>
+
+
+<link rel="stylesheet" href="https://static.figma.com/api/figma-extension-api-0.0.1.css">
+<style>
+select {
+  font-family: 'inter', sans-serif;
+  font-size:11px;
+  border:1px solid #d4d4d4;
+  padding:7px;
+  margin-left:5px;
+  border-radius:2px;
+}
+button:disabled {
+  opacity: 0.3;
+}
+#welcome {
+  
+  margin:20px;
+}
+.loader{
+  display: block;
+  margin:0 auto;
+  margin-top:60px;
+  width: 25px;
+  height: 25px;
+  border: 3px solid rgba(123, 97, 255,0.3);
+  border-radius: 50%;
+  border-top-color: rgba(123, 97, 255,1);
+  animation: spin 1s ease-in-out infinite;
+  -webkit-animation: spin 1s ease-in-out infinite;
+}
+#next {
+  background:url('data:image/svg+xml;utf8,<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.7071 8.00004L12.3536 7.64648L9.35355 4.64648L8.64645 5.35359L10.7929 7.50004L2.5 7.50004L2.5 8.50004L10.7929 8.50004L8.64645 10.6465L9.35355 11.3536L12.3536 8.35359L12.7071 8.00004Z" fill="black" fill-opacity="0.8"/></svg>') no-repeat center center;
+  text-indent: -100px;
+  overflow: hidden;
+  float:right;
+  margin-left:5px;
+  
+}
+#prev {
+  background:url('data:image/svg+xml;utf8,<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M2.29297 8.00004L2.64652 7.64648L5.64652 4.64648L6.35363 5.35359L4.20718 7.50004L12.5001 7.50004V8.50004L4.20718 8.50004L6.35363 10.6465L5.64652 11.3536L2.64652 8.35359L2.29297 8.00004Z" fill="black" fill-opacity="0.8"/></svg>') no-repeat center;
+  text-indent: -100px;
+  overflow: hidden;
+  float:right;
+
+}
+@keyframes spin {
+  to { -webkit-transform: rotate(360deg); }
+}
+@-webkit-keyframes spin {
+  to { -webkit-transform: rotate(360deg); }
+}
+  html {
+    scroll-behavior: smooth;
+  }
+  .hide {
+    display:none;
+  }
+  #errBox {
+    text-align: center;
+    margin:10px;
+    border:1px solid red;
+    padding:10px;
+    color:red;
+  }
+  body {
+    margin:0;
+  }
+  #list {
+    margin-top:10px;
+    padding-bottom:50px;
+  }
+.instance {
+  display:block;
+}
+button {
+  display:inline-block;
+}
+.buttonBar {
+
+  background:white;
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  height:30px;
+  padding:5px;
+  z-index:10;
+  border-top:1px solid #ddd;
+}
+.page {
+  transition: max-height 0.4s ease 0s;
+
+  border-bottom:1px solid #ddd;
+  padding-bottom:10px;
+  
+  overflow: hidden;
+}
+.page.closed {
+  max-height: 30px !important;
+  transition: max-height 0.4s ease 0s;
+
+}
+.page h4 {
+  padding-left:20px;
+  margin-bottom:10px;
+  background:url('data:image/svg+xml;utf8,<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 8L8 5V11L12 8Z" fill="#7B61FF" fill-opacity="0.8"/></svg>')  no-repeat;
+}
+a.instance {
+  display:block;
+  padding:6px;
+  text-decoration: none;
+  color:#7B61FF;
+  padding-left:30px;
+  transition: 300ms;
+  background:url('data:image/svg+xml;utf8,<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M1.82837 7.99988L2.16424 7.664L7.66425 2.164L8.00012 1.82812L8.336 2.164L13.836 7.664L14.1719 7.99988L13.836 8.33575L8.336 13.8358L8.00012 14.1716L7.66425 13.8358L2.16424 8.33575L1.82837 7.99988ZM8.00012 12.8281L12.8284 7.99988L8.00012 3.17163L3.17187 7.99988L8.00012 12.8281Z" fill="#7B61FF" fill-opacity="0.8"/></svg>')  no-repeat left 7px center;
+  border:1px solid white;
+
+  
+}
+a.instance:hover {
+  border:1px solid rgb(123, 97, 255)
+}
+a.instance.active {
+  background-color:rgba(24, 145, 251, 0.3);
+}
+</style>
+<script>
+iframeHeight = 300; // the iframe height
+uiHeight = 170; //ui elements
+
+
+
+document.getElementById('next').addEventListener('click', function() {
+  move('down');
+},false);
+
+document.getElementById('prev').addEventListener('click', function() {
+  move('up');
+},false);
+
+function move(direction) {
+  
+  //console.log('move function', direction);
+  instances = document.getElementsByClassName('instance');
+  var activeInstance = -1;
+  //console.log('instances', instances);
+    for(var i=0; i< instances.length; i++) {
+      if(instances[i].classList.contains('active')) {
+        //console.log('active instace contains class list', i);
+        instances[i].classList.remove('active');
+        activeInstance = i;
+      }        
+    }
+
+    //need to move scroll list location !!!!!!!!!!!!!!!
+    //console.log('after loop acitve instnace', activeInstance);
+    if(direction == 'down') {
+      activeInstance++;
+      if(activeInstance == instances.length) {
+        activeInstance = 0;
+      }
+      offset = instances[activeInstance].offsetTop
+      //console.log('offset top', offset);
+      //console.log(document.body.scrollTop, 'scorll height');
+      scrollHeight = document.body.scrollTop;
+      //console.log(iframeHeight - uiHeight - offset + scrollHeight,' iframeHeight - uiHeight - offset + scrollHeight');
+      if(iframeHeight - uiHeight - offset + scrollHeight < 0) {
+        
+        window.scrollBy({ 
+          top: 130, // could be negative value
+          left: 0, 
+          behavior: 'smooth' 
+        });
+      }
+      if(iframeHeight - uiHeight - offset + scrollHeight > 300) {
+        
+        window.scroll({
+          top: 0, 
+          left: 0, 
+          behavior: 'smooth'
+        });
+      }
+      
+    }
+    if(direction == 'up') {
+      activeInstance--;      
+      if(activeInstance == -1) {
+        activeInstance = instances.length-1;
+        
+        offset = instances[activeInstance].offsetTop;
+        window.scroll({
+          top: offset, 
+          left: 0, 
+          behavior: 'smooth'
+        });
+        
+      }
+      offset = instances[activeInstance].offsetTop
+      //console.log('offset top', offset);
+      //console.log(document.body.scrollTop, 'scorll height');
+      scrollHeight = document.body.scrollTop;
+      //console.log(iframeHeight - uiHeight - offset + scrollHeight,' iframeHeight - uiHeight - offset + scrollHeight');
+      if(offset < scrollHeight ) {        
+        window.scrollBy({ 
+          top: -130, // could be negative value
+          left: 0, 
+          behavior: 'smooth' 
+        });
+      }
+     
+    }
+    
+    instances[activeInstance].classList.add("active");
+    id = instances[activeInstance].getAttribute('data-id');
+    page = instances[activeInstance].getAttribute('data-page');
+    //console.log(id, 'id');
+    //console.log(page, 'page');
+    parent.postMessage({ pluginMessage: { type: 'zoom', id: id , page: page} }, '*')
+  
+}
+
+//result recieved here!!!
+onmessage = (result) => {
+  //remove ddisabled
+  
+  window.scrollTo({ 
+          top: 0, // could be negative value
+          left: 0, 
+          behavior: 'smooth' 
+        });
+  //console.log('message0', result.data.pluginMessage );
+  if(result.data.pluginMessage == 1) {
+    //console.log('you selected nothing');
+    document.getElementById('loader').classList.add('hide');
+    //document.getElementById('errBox').classList.remove('hide');
+    //document.getElementById("errBox").innerHTML = "Nothing Selected, Please select a Frame or an Instance";
+    //disable buttons
+    document.getElementById('next').disabled = true;
+    document.getElementById('prev').disabled = true;
+  }
+  else if(result.data.pluginMessage == 2) {
+    document.getElementById('loader').classList.add('hide');
+    //document.getElementById('errBox').classList.remove('hide');
+    //document.getElementById("errBox").innerHTML = "Please select only a single Frame or Instance";
+
+    //disable buttons
+    document.getElementById('next').disabled = true;
+    document.getElementById('prev').disabled = true;
+  }
+  else {
+    document.getElementById('next').disabled = false;
+    document.getElementById('prev').disabled = false;
+    document.getElementById('loader').classList.add('hide');
+    document.getElementById('errBox').classList.add('hide');
+    document.getElementById('list').classList.remove('hide');
+    list = document.getElementById('list');
+  list.innerHTML = "";
+  //console.log('the result in the ui', result.data.pluginMessage);
+  const pages =  result.data.pluginMessage;
+  console.log(pages, 'ages reuslt');
+  var pageNo = 0;
+  for(page of pages) {
+    //console.log(pageNo, 'page no');
+    if(page.instances.length > 0) {
+      //console.log(page, 'age');
+      //console.log(page.instances.length, 'instance s lenght');
+      
+
+      pageHtml = document.createElement('DIV');
+      pageHtml.classList.add('page');
+      //pageHtml.classList.add('closed');
+      titleHtml = document.createElement('H4');
+      
+      titleHtml.classList.add('pageTitle');
+      titleHtml.innerHTML = "<a href='#' class='pageSelection' data-page='" + page.id + "'>" +  page.name + " (" + page.instances.length + ")</a>";
+      pageHtml.appendChild(titleHtml);
+      /*pageHtml.addEventListener("click", function(e) {
+        console.log('clicked on h4');
+        this.classList.toggle('closed');
+      });*/
+      for(instance of page.instances) {
+        pageHtml.innerHTML += "<a href='#' class='instance' data-page='" + page.id + "' data-id=" + instance.id + ">" + instance.name + "</a>";
+      }
+      
+
+      list.appendChild(pageHtml);
+      
+      
+    
+    
+      
+    
+    pageNo++;
+    }
+  }
+  /*var pageSections = document.getElementsByClassName('page');
+  for( i=0; i< pageSections.length; i++) {
+    var height = pageSections[i].offsetHeight ;
+    pageSections[i].setAttribute('style', 'max-height:' + height + 'px');
+  }*/
+  
+  instances = document.getElementsByClassName('instance');
+  function zoom(e) {
+    e.stopPropagation();
+    e.preventDefault();
+    //console.log('zoom', e);
+    
+    //get all active classes
+    instances = document.getElementsByClassName('active');
+    //remove 'active' class
+    for(var i=0; i< instances.length; i++) {
+      instances[i].classList.remove('active');
+    }
+    //add 'active' class
+    e.srcElement.classList.add("active");
+
+    //get data to zomm
+    id = e.srcElement.getAttribute('data-id');
+    page = e.srcElement.getAttribute('data-page');
+    console.log(id, 'id');
+    //console.log(page, 'page');
+    parent.postMessage({ pluginMessage: { type: 'zoom', id: id , page: page} }, '*')
+
+  }
+  for( var i =0; i< instances.length; i++) {
+    instances[i].addEventListener('click', zoom, false);
+  }
+  }
+
+  pages = document.getElementsByClassName('pageSelection');
+  
+  
+  function zoomPage(e) {
+    e.stopPropagation();
+    e.preventDefault();
+    console.log(e, 'event');
+   
+    //remove all active classes
+    //get all active classes
+    instances = document.getElementsByClassName('active');
+    //remove 'active' class
+    for(var i=0; i< instances.length; i++) {
+      instances[i].classList.remove('active');
+    }
+    page = e.srcElement.getAttribute('data-page');
+    let id = e.srcElement.parentNode.parentNode.childNodes;
+    
+    console.log(id, 'id child nodes');
+
+    //get ids from childnodes
+    let pageInstances = []
+    for( var i=1; i<id.length; i++) {
+      console.log(id[i],'childnode');
+      pageInstances.push(id[i].getAttribute('data-id'));
+      
+    }
+    console.log(pageInstances,' page instnaces');
+
+   
+    var instances = JSON.stringify(pageInstances);
+    console.log(instances, 'instances afer stringgig');
+    parent.postMessage({ pluginMessage: { type: 'zoomPage', instances: instances , page: page} }, '*')
+    
+  }
+  for( var i=0; i<pages.length; i++) {
+    pages[i].addEventListener('click', zoomPage, false);
+  }
+
+  
+  
+}//result
+
+document.getElementById('create').onclick = () => {
+  //console.log('scoll to top');
+  document.getElementById('welcome').classList.add('hide');
+  document.getElementById('list').classList.add('hide');
+  document.getElementById('errBox').classList.add('hide');
+  document.getElementById('loader').classList.remove('hide');
+  var where = document.getElementById('where')
+  var scope = where.options[where.selectedIndex].value;
+
+  setTimeout(function() {  parent.postMessage({ pluginMessage: { type: 'find', scope: scope } }, '*')}, 100);
+  //parent.postMessage({ pluginMessage: { type: 'find' } }, '*')
+  
+}
+document.onkeydown = function(e) {
+  if(e.key == 'ArrowRight') {
+    document.getElementById('next').focus();
+  }
+  if(e.key == 'ArrowLeft') {
+    document.getElementById('prev').focus();
+  }
+}
+document.onkeyup = function(e) {
+ if(e.key == 'ArrowRight') {
+   //next
+   document.getElementById('next').blur();
+   move('down');
+ }
+ if(e.key == 'ArrowLeft') {
+   //prev
+   move('up');
+   document.getElementById('prev').blur();
+
+ }
+
+}
+
+
+</script>
